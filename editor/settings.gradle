@@ -1,0 +1,5 @@
+include ':app'
+rootProject.name = "editor"
+
+include ':ijkplayer-java'
+project(':ijkplayer-java').projectDir = new File('../android/ijkplayer/ijkplayer-java')
