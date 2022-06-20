@@ -908,7 +908,10 @@ static void video_image_display2(FFPlayer *ffp)
                 SDL_Delay(20);
             }
         }
-        SDL_VoutDisplayYUVOverlay(ffp->vout, vp->bmp);
+        int ret=SDL_VoutDisplayYUVOverlay(ffp->vout, vp->bmp);
+        if(ret>=0&&ffp->show_first_frame){
+            ffp->show_first_frame=0;
+        }
         ffp->stat.vfps = SDL_SpeedSamplerAdd(&ffp->vfps_sampler, FFP_SHOW_VFPS_FFPLAY, "vfps[ffplay]");
         if (!ffp->first_video_frame_rendered) {
             ffp->first_video_frame_rendered = 1;
@@ -3332,7 +3335,7 @@ static int read_thread(void *arg)
     }
     ffp->prepared = true;
     ffp_notify_msg1(ffp, FFP_MSG_PREPARED);
-    if (!ffp->render_wait_start && !ffp->start_on_prepared) {
+    if (!ffp->render_wait_start && !ffp->start_on_prepared&&!ffp->prepare_packet_queue_put) {
         while (is->pause_req && !is->abort_request) {
             SDL_Delay(20);
         }
@@ -4740,6 +4743,9 @@ void ffp_check_buffering_l(FFPlayer *ffp)
         av_log(ffp, AV_LOG_DEBUG, "buf pos=%"PRId64", %%%d\n", buf_time_position, buf_percent);
 #endif
         ffp_notify_msg3(ffp, FFP_MSG_BUFFERING_UPDATE, (int)buf_time_position, buf_percent);
+        if(ffp->show_first_frame&&buf_percent>0){
+            ffp_seek_to_l(ffp,0);
+        }
     }
 
     if (need_start_buffering) {

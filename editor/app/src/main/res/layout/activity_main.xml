@@ -5,6 +5,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <me.shiki.editor.view.widget.media.IjkVideoView
+        android:id="@+id/video_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-
+    <me.shiki.editor.view.widget.MediaProgressBar
+        android:id="@+id/media_progress_bar"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:background="#ff0000" />
 </androidx.constraintlayout.widget.ConstraintLayout>
