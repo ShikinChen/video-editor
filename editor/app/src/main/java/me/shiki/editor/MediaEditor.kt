@@ -17,6 +17,9 @@ class MediaEditor {
         }
     }
 
+    var startTime: Long = 0
+    var endTime: Long = -1
+
     var dumpImageCallback: ((filename: String, index: Int) -> Unit)? = null
 
     fun init() {

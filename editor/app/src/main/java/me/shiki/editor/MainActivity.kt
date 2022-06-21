@@ -44,6 +44,8 @@ class MainActivity : AppCompatActivity() {
         "${sdPath}/sample_1280x720_surfing_with_audio.mp4"
     }
 
+    private var duration: Long = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -58,10 +60,16 @@ class MainActivity : AppCompatActivity() {
                 mediaProgressBar.setImgView(index, filename)
             }
         }
-        mediaProgressBar.onProgressBarChangeListener = {
+        mediaProgressBar.onProgressBarPointChangeListener = {
             Log.d(TAG, "value:$it")
             val duration = mediaEditor.duration()
             videoView.seekTo((duration * it).toInt())
+        }
+        mediaProgressBar.onProgressBarLeftRightPointChangeListener = { leftValue, rightValue ->
+            mediaEditor.startTime = (duration * leftValue).toLong()
+            mediaEditor.endTime = (duration * rightValue).toLong()
+            Log.d(TAG, "left:$leftValue\tright:$rightValue")
+            Log.d(TAG, "startTime:${mediaEditor.startTime}\tendTime:${mediaEditor.endTime}")
         }
 
         PermissionX.init(this)
@@ -76,7 +84,8 @@ class MainActivity : AppCompatActivity() {
                     if (!outFile.exists()) {
                         outFile.mkdirs()
                     }
-                    val duration = mediaEditor.duration()
+                    duration = mediaEditor.duration()
+                    mediaEditor.endTime = duration
                     mediaEditor.dumpImageList(mediaProgressBar.imgSize, 640, 320, outFile.absolutePath)
                     Log.d(TAG, "duration:${mediaEditor.duration()}")
                 }
