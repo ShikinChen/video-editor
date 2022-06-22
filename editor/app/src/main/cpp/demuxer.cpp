@@ -48,7 +48,6 @@ void Demuxer::DestroyDemuxer() {
   }
 }
 
-
 void Demuxer::DumpImageList(int64_t start_time,
 							int64_t end_time, int img_size,
 							int img_width,
@@ -61,7 +60,6 @@ void Demuxer::DumpImageList(int64_t start_time,
   char *filename = strdup(out_filename);
   LOGD("out_filename:%s", filename)
   unique_lock<mutex> lock(dump_image_mutex_);
-  is_dump_image_ = true;
   long time = MediaUtils::ToTimeByMillisecond(media_->video_stream());
   AVRational time_base = media_->video_stream()->time_base;
   long step = MediaUtils::ToAVTime((end_time - start_time)/img_size);
@@ -114,7 +112,7 @@ void Demuxer::DumpImageList(int64_t start_time,
   if (start > 0) {
 	avformat_seek_file(media_->format_ctx(), -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
   }
-  while (result >= 0 && is_dump_image_ && av_read_frame(media_->format_ctx(), pkt_) >= 0) {
+  while (result >= 0 && av_read_frame(media_->format_ctx(), pkt_) >= 0) {
 	if (pkt_->stream_index==media_->video_stream_index()) {
 	  int32_t ret = avcodec_send_packet(media_->decoder()->video_dec_ctx(), pkt_);
 	  if (ret < 0) {
@@ -125,8 +123,10 @@ void Demuxer::DumpImageList(int64_t start_time,
 		ret = avcodec_receive_frame(media_->decoder()->video_dec_ctx(), frame_);
 		if (ret < 0) {
 		  if (ret==AVERROR_EOF || ret==AVERROR(EAGAIN)) {
+			av_frame_unref(frame_);
 			break;
 		  }
+		  av_frame_unref(frame_);
 		  LOGE("Error:during decoding:%s", av_err2str(ret))
 		  break;
 		}

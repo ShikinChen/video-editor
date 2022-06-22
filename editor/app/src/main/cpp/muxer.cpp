@@ -15,6 +15,16 @@ void Muxer::set_media_(const std::shared_ptr<Media> &media) {
   media_ = media;
 }
 int32_t Muxer::InitMuxer() {
+  video_encoder_ = FindVideoEncoder();
+  if (!video_encoder_) {
+	LOGD("Error:FindVideoEncoder fail")
+	return -1;
+  }
+  audio_encoder_ = FindAudioEncoder();
+  if (!audio_encoder_) {
+	LOGD("Error:FindAudioEncoder fail")
+	return -1;
+  }
   pkt_ = av_packet_alloc();
   if (!pkt_) {
 	LOGD("Error:could not alloc packet")
@@ -27,4 +37,11 @@ int32_t Muxer::InitMuxer() {
 	return -1;
   }
   return 0;
+}
+void Muxer::Cut(int64_t start_time, int64_t end_time, const char *out_filename) {
+  if (media_) {
+	media_->decoder()->Decoding(start_time, end_time, [=](const AVFrame *frame) {
+
+	});
+  }
 }

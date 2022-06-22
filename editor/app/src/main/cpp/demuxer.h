@@ -46,7 +46,6 @@ class Demuxer {
   AVFrame *frame_ = nullptr;
   AVPacket *pkt_ = nullptr;
 
-  std::atomic_bool is_dump_image_;
   std::mutex dump_image_mutex_;
 
   std::shared_ptr<Media> media_;

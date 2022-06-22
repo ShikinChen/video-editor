@@ -22,6 +22,10 @@ IJK_FFMPEG_FORK=https://github.com/ShikinChen/FFmpeg.git
 IJK_FFMPEG_COMMIT=ff4.4.3--ijk0.8.8
 IJK_FFMPEG_LOCAL_REPO=extra/ffmpeg
 
+X264_UPSTREAM=https://code.videolan.org/videolan/x264.git
+X264_FORK=https://code.videolan.org/videolan/x264.git
+X264_LOCAL_REPO=extra/x264
+
 set -e
 TOOLS=tools
 
@@ -30,12 +34,20 @@ git --version
 echo "== pull ffmpeg base =="
 sh $TOOLS/pull-repo-base.sh $IJK_FFMPEG_UPSTREAM $IJK_FFMPEG_LOCAL_REPO
 
+sh $TOOLS/pull-repo-base.sh $X264_UPSTREAM $X264_LOCAL_REPO
+
 function pull_fork()
 {
     echo "== pull ffmpeg fork $1 =="
     sh $TOOLS/pull-repo-ref.sh $IJK_FFMPEG_FORK android/contrib/ffmpeg-$1 ${IJK_FFMPEG_LOCAL_REPO}
     cd android/contrib/ffmpeg-$1
     git checkout ${IJK_FFMPEG_COMMIT} -B ijkplayer
+    cd -
+
+    sh $TOOLS/pull-repo-ref.sh $X264_FORK android/contrib/x264-$1 ${X264_LOCAL_REPO}
+    cd android/contrib/x264-$1
+    # git checkout stable -B stable
+    git checkout baee400f -B baee400f
     cd -
 }
 

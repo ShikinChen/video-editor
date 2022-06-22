@@ -23,17 +23,18 @@ class Decoder {
   explicit Decoder(const std::shared_ptr<Media> &media);
   virtual ~Decoder();
 
-  int32_t InitDecoder(int *video_stream_index,int *audio_stream_index);
+  int32_t InitDecoder(int *video_stream_index, int *audio_stream_index);
   void DestroyDecoder();
+
+  void Decoding(int64_t start_time,
+				   int64_t end_time, std::function<void(const AVFrame *frame)> callback);
 
   AVCodecContext *video_dec_ctx() const;
   AVCodecContext *audio_dec_ctx() const;
 
-
  private:
   int32_t OpenCodecContext(int *stream_idx, AVCodecContext **dec_ctx,
 						   AVFormatContext *fmt_ctx, AVMediaType type);
-
 
  private:
   std::shared_ptr<Media> media_;

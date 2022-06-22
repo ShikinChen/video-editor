@@ -5,6 +5,7 @@
 #include "decoder.h"
 #include "media.h"
 #include "android_log.h"
+#include "media_utils.h"
 
 Decoder::Decoder(const std::shared_ptr<Media> &media) : media_(media) {
 
@@ -79,4 +80,51 @@ AVCodecContext *Decoder::video_dec_ctx() const {
 }
 AVCodecContext *Decoder::audio_dec_ctx() const {
   return audio_dec_ctx_;
+}
+void Decoder::Decoding(int64_t start_time,
+					   int64_t end_time, std::function<void(const AVFrame *)> callback) {
+  AVPacket *pkt = av_packet_alloc();
+  AVFrame *frame = av_frame_alloc();
+  int32_t result = -1;
+
+  int64_t start = MediaUtils::ToAVTime(start_time);
+  if (start > 0) {
+	avformat_seek_file(media_->format_ctx(), -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+  }
+
+  while (av_read_frame(media_->format_ctx(), pkt) >= 0) {
+	AVCodecContext *codec_ctx;
+	if (pkt->stream_index==media_->video_stream_index()) {
+	  codec_ctx = video_dec_ctx_;
+	} else if (pkt->stream_index==media_->audio_stream_index()) {
+	  codec_ctx = audio_dec_ctx_;
+	}
+	result = avcodec_send_packet(codec_ctx, pkt);
+	while (result >= 0) {
+	  result = avcodec_receive_frame(codec_ctx, frame);
+	  if (result < 0) {
+		if (result==AVERROR_EOF || result==AVERROR(EAGAIN)) {
+		  av_frame_unref(frame);
+		  break;
+		}
+		av_frame_unref(frame);
+		LOGE("Error:during decoding:%s", av_err2str(result))
+		break;
+	  }
+	  callback(frame);
+	  int64_t end = frame->pts/AV_TIME_BASE;
+	  LOGD("frame->pts:%ld", end);
+	  av_frame_unref(frame);
+	  if (end >= end_time) {
+		break;
+	  }
+	}
+	av_packet_unref(pkt);
+  }
+  if (pkt) {
+	av_packet_free(&pkt);
+  }
+  if (frame) {
+	av_frame_free(&frame);
+  }
 }
