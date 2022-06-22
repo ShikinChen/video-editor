@@ -17,12 +17,14 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#include "media.h"
+
 class Demuxer {
  public:
   explicit Demuxer();
   virtual ~Demuxer();
 
-  int32_t InitDemuxer(const char *filename);
+  int32_t InitDemuxer();
   void DestroyDemuxer();
 
   void DumpImageList(int64_t start_time,
@@ -34,30 +36,20 @@ class Demuxer {
 					 std::function<void(const char *img_filename, int index)> callback);
 
   int64_t Duration();
- private:
-  int32_t OpenCodecContext(int *stream_idx, AVCodecContext **dec_ctx,
-						   AVFormatContext *fmt_ctx, AVMediaType type);
+  void set_media_(const std::shared_ptr<Media> &media);
 
+ private:
   void CreateImgConvertAndCodecCtx(SwsContext **img_convert_ctx, AVCodecContext **img_codec_ctx, int img_width,
 								   int img_height);
 
  private:
-  AVFormatContext *format_ctx_ = nullptr;
-  AVCodecContext *video_dec_ctx_ = nullptr;
-  AVCodecContext *audio_dec_ctx_ = nullptr;
-
-  int video_stream_index_ = -1;
-  int audio_stream_index_ = -1;
-
-  AVStream *video_stream_ = nullptr;
-  AVStream *audio_stream_ = nullptr;
-
   AVFrame *frame_ = nullptr;
   AVPacket *pkt_ = nullptr;
 
   std::atomic_bool is_dump_image_;
   std::mutex dump_image_mutex_;
 
+  std::shared_ptr<Media> media_;
 };
 
 #endif //EDITOR_APP_SRC_MAIN_CPP_DEMUXER_H_

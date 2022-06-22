@@ -22,38 +22,7 @@ Demuxer::~Demuxer() {
   DestroyDemuxer();
 }
 
-int32_t Demuxer::InitDemuxer(const char *filename) {
-  int result = -1;
-  if (strlen(filename)==0) {
-	LOGE("Error: empty input file name.")
-	return result;
-  }
-  result = avformat_open_input(&format_ctx_, filename, nullptr, nullptr);
-  if (result < 0) {
-	LOGE("Error: avformat_open_input failed.")
-	return result;
-  }
-  result = avformat_find_stream_info(format_ctx_, nullptr);
-  if (result < 0) {
-	LOGE("Error: avformat_find_stream_info failed.")
-	return result;
-  }
-
-  result = OpenCodecContext(&video_stream_index_, &video_dec_ctx_, format_ctx_, AVMEDIA_TYPE_VIDEO);
-  if (result < 0) {
-	LOGE("Error: OpenCodecContext AVMEDIA_TYPE_VIDEO failed.")
-	return result;
-  }
-  video_stream_ = format_ctx_->streams[video_stream_index_];
-
-  result = OpenCodecContext(&audio_stream_index_, &audio_dec_ctx_, format_ctx_, AVMEDIA_TYPE_AUDIO);
-  if (result < 0) {
-	LOGE("Error: OpenCodecContext AVMEDIA_TYPE_AUDIO failed.")
-	return result;
-  }
-  audio_stream_ = format_ctx_->streams[audio_stream_index_];
-  av_dump_format(format_ctx_, 0, filename, 0);
-
+int32_t Demuxer::InitDemuxer() {
   pkt_ = av_packet_alloc();
   if (!pkt_) {
 	LOGD("Error:could not alloc packet")
@@ -65,7 +34,7 @@ int32_t Demuxer::InitDemuxer(const char *filename) {
 	LOGD("Error:could not alloc frame")
 	return -1;
   }
-  return result;
+  return 0;
 }
 
 void Demuxer::DestroyDemuxer() {
@@ -77,54 +46,9 @@ void Demuxer::DestroyDemuxer() {
 	av_packet_free(&pkt_);
 	pkt_ = nullptr;
   }
-  if (format_ctx_) {
-	avformat_close_input(&format_ctx_);
-	format_ctx_ = nullptr;
-  }
-  if (audio_dec_ctx_) {
-	avcodec_free_context(&audio_dec_ctx_);
-	audio_dec_ctx_ = nullptr;
-  }
-  if (video_dec_ctx_) {
-	avcodec_free_context(&video_dec_ctx_);
-	video_dec_ctx_ = nullptr;
-  }
 }
-int32_t Demuxer::OpenCodecContext(int *stream_idx,
-								  AVCodecContext **dec_ctx,
-								  AVFormatContext *fmt_ctx,
-								  AVMediaType type) {
-  int32_t result = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
-  if (result < 0) {
-	LOGE("Error: Could not find %s stream in input file.", av_get_media_type_string(type))
-	return result;
-  }
-  int stream_index = result;
-  result = -1;
-  AVStream *st = fmt_ctx->streams[stream_index];
-  AVCodec *dec = avcodec_find_decoder(st->codecpar->codec_id);
-  if (!dec) {
-	LOGE("Error: Failed to find codec:%s", av_get_media_type_string(type))
-	return result;
-  }
-  *dec_ctx = avcodec_alloc_context3(dec);
-  if (!*dec_ctx) {
-	LOGE("Error: Failed to alloc codec context:%s", av_get_media_type_string(type))
-	return result;
-  }
-  result = avcodec_parameters_to_context(*dec_ctx, st->codecpar);
-  if (result < 0) {
-	LOGE("Error: Failed to copy codec parameters to decoder context.")
-	return result;
-  }
-  result = avcodec_open2(*dec_ctx, dec, nullptr);
-  if (result < 0) {
-	LOGE("Error: Error: Could not open %s codec", av_get_media_type_string(type))
-	return result;
-  }
-  *stream_idx = stream_index;
-  return result;
-}
+
+
 void Demuxer::DumpImageList(int64_t start_time,
 							int64_t end_time, int img_size,
 							int img_width,
@@ -138,8 +62,8 @@ void Demuxer::DumpImageList(int64_t start_time,
   LOGD("out_filename:%s", filename)
   unique_lock<mutex> lock(dump_image_mutex_);
   is_dump_image_ = true;
-  long time = MediaUtils::ToTimeByMillisecond(video_stream_);
-  AVRational time_base = video_stream_->time_base;
+  long time = MediaUtils::ToTimeByMillisecond(media_->video_stream());
+  AVRational time_base = media_->video_stream()->time_base;
   long step = MediaUtils::ToAVTime((end_time - start_time)/img_size);
 
   LOGD("time:%ld,step:%ld", time, step)
@@ -188,17 +112,17 @@ void Demuxer::DumpImageList(int64_t start_time,
 
   int64_t start = MediaUtils::ToAVTime(start_time);
   if (start > 0) {
-	avformat_seek_file(format_ctx_, -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+	avformat_seek_file(media_->format_ctx(), -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
   }
-  while (result >= 0 && is_dump_image_ && av_read_frame(format_ctx_, pkt_) >= 0) {
-	if (pkt_->stream_index==video_stream_index_) {
-	  int32_t ret = avcodec_send_packet(video_dec_ctx_, pkt_);
+  while (result >= 0 && is_dump_image_ && av_read_frame(media_->format_ctx(), pkt_) >= 0) {
+	if (pkt_->stream_index==media_->video_stream_index()) {
+	  int32_t ret = avcodec_send_packet(media_->decoder()->video_dec_ctx(), pkt_);
 	  if (ret < 0) {
 		LOGE("Error: avcodec_send_packet failed.")
 		break;
 	  }
 	  while (ret >= 0 && img_count < img_size) {
-		ret = avcodec_receive_frame(video_dec_ctx_, frame_);
+		ret = avcodec_receive_frame(media_->decoder()->video_dec_ctx(), frame_);
 		if (ret < 0) {
 		  if (ret==AVERROR_EOF || ret==AVERROR(EAGAIN)) {
 			break;
@@ -248,7 +172,7 @@ void Demuxer::DumpImageList(int64_t start_time,
 		  av_frame_unref(frame_);
 		  start += step;
 		  LOGD("start:%ld", start)
-		  avformat_seek_file(format_ctx_, -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+		  avformat_seek_file(media_->format_ctx(), -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
 		} else if (frame_->pict_type==AV_PICTURE_TYPE_B) {
 		  LOGD("pict_type:AV_PICTURE_TYPE_B")
 		} else if (frame_->pict_type==AV_PICTURE_TYPE_P) {
@@ -275,9 +199,9 @@ void Demuxer::DumpImageList(int64_t start_time,
 void Demuxer::CreateImgConvertAndCodecCtx(SwsContext **img_convert_ctx, AVCodecContext **img_codec_ctx, int img_width,
 										  int img_height) {
   *img_convert_ctx =
-	  sws_getContext(video_stream_->codecpar->width,
-					 video_stream_->codecpar->height,
-					 static_cast<AVPixelFormat>(video_stream_->codecpar->format),
+	  sws_getContext(media_->video_stream()->codecpar->width,
+					 media_->video_stream()->codecpar->height,
+					 static_cast<AVPixelFormat>(media_->video_stream()->codecpar->format),
 					 img_width,
 					 img_height,
 					 AV_PIX_FMT_RGB24,
@@ -299,18 +223,21 @@ void Demuxer::CreateImgConvertAndCodecCtx(SwsContext **img_convert_ctx, AVCodecC
 	LOGE("png avcodec_alloc_context3 failed")
 	return;
   }
-  (*img_codec_ctx)->bit_rate = video_stream_->codecpar->bit_rate;
+  (*img_codec_ctx)->bit_rate = media_->video_stream()->codecpar->bit_rate;
   (*img_codec_ctx)->width = img_width;
   (*img_codec_ctx)->height = img_height;
   (*img_codec_ctx)->pix_fmt = AV_PIX_FMT_RGB24;
   (*img_codec_ctx)->codec_type = AVMEDIA_TYPE_VIDEO;
-  (*img_codec_ctx)->time_base.num = video_stream_->time_base.num;
-  (*img_codec_ctx)->time_base.den = video_stream_->time_base.den;
+  (*img_codec_ctx)->time_base.num = media_->video_stream()->time_base.num;
+  (*img_codec_ctx)->time_base.den = media_->video_stream()->time_base.den;
   avcodec_open2(*img_codec_ctx, encoder, nullptr);
 }
 int64_t Demuxer::Duration() {
-  if (format_ctx_) {
-	return format_ctx_->duration/MediaUtils::kMillisecondUnit;
+  if (media_->format_ctx()) {
+	return media_->format_ctx()->duration/MediaUtils::kMillisecondUnit;
   }
   return -1;
+}
+void Demuxer::set_media_(const shared_ptr<Media> &media) {
+  media_ = media;
 }
