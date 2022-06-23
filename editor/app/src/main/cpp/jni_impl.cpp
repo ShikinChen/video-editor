@@ -60,6 +60,11 @@ JNIEXPORT jlong JNICALL Duration(JNIEnv *env,
 
 JNIEXPORT void JNICALL EncodingDecodingInfo(JNIEnv *env, jobject instance) {
   void *opaque = nullptr;
+  const AVOutputFormat *m_tmp;
+  while ((m_tmp = av_muxer_iterate(&opaque))) {
+	LOGD("[Muxer]:%s", m_tmp->name);
+  }
+  LOGD("----------------------------------------");
   const AVCodec *c_tmp;
   while ((c_tmp = av_codec_iterate(&opaque))) {
 	switch (c_tmp->type) {
