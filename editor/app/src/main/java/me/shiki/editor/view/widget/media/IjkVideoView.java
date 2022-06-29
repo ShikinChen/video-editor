@@ -1273,7 +1273,7 @@ public class IjkVideoView extends FrameLayout implements MediaController.MediaPl
 
     public void setVideoRotation(int rotateDegrees) {
         if (mMediaPlayer != null) {
-            IjkMediaPlayer.postEventFromNative(new WeakReference(mMediaPlayer),IjkMediaPlayer.MEDIA_INFO, IMediaPlayer.MEDIA_INFO_VIDEO_ROTATION_CHANGED, rotateDegrees, null);
+            IjkMediaPlayer.postEventFromNative(new WeakReference(mMediaPlayer), IjkMediaPlayer.MEDIA_INFO, IMediaPlayer.MEDIA_INFO_VIDEO_ROTATION_CHANGED, rotateDegrees % 360, null);
         }
     }
 
