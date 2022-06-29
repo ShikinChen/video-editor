@@ -16,4 +16,21 @@
         android:layout_height="50dp"
         android:background="@android:color/darker_gray"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+
+    <Button
+        android:id="@+id/left_rotate_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="左旋转"
+        app:layout_constraintBottom_toTopOf="@+id/media_progress_bar"
+        app:layout_constraintLeft_toLeftOf="@+id/media_progress_bar" />
+
+    <Button
+        android:id="@+id/right_rotate_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="右旋转"
+        app:layout_constraintBottom_toTopOf="@+id/media_progress_bar"
+        app:layout_constraintRight_toRightOf="@+id/media_progress_bar" />
 </androidx.constraintlayout.widget.ConstraintLayout>

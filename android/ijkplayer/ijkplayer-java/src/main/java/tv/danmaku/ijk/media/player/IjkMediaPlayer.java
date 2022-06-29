@@ -76,7 +76,7 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     private static final int MEDIA_SET_VIDEO_SIZE = 5;
     private static final int MEDIA_TIMED_TEXT = 99;
     private static final int MEDIA_ERROR = 100;
-    private static final int MEDIA_INFO = 200;
+    public static final int MEDIA_INFO = 200;
 
     protected static final int MEDIA_SET_VIDEO_SAR = 10001;
 
@@ -1064,7 +1064,7 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
      * it. (This is the cookie passed to native_setup().)
      */
     @CalledByNative
-    private static void postEventFromNative(Object weakThiz, int what,
+    public static void postEventFromNative(Object weakThiz, int what,
             int arg1, int arg2, Object obj) {
         if (weakThiz == null)
             return;

@@ -42,6 +42,7 @@ import androidx.appcompat.app.AlertDialog;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -231,7 +232,7 @@ public class IjkVideoView extends FrameLayout implements MediaController.MediaPl
                 setRenderView(renderView);
                 break;
             }
-            case RENDER_SURFACE_VIEW: {
+            case RENDER_SURFACE_VIEW: {//MARK 使用SurfaceView进行渲染
                 SurfaceRenderView renderView = new SurfaceRenderView(getContext());
                 setRenderView(renderView);
                 break;
@@ -1268,5 +1269,15 @@ public class IjkVideoView extends FrameLayout implements MediaController.MediaPl
 
     public int getSelectedTrack(int trackType) {
         return MediaPlayerCompat.getSelectedTrack(mMediaPlayer, trackType);
+    }
+
+    public void setVideoRotation(int rotateDegrees) {
+        if (mMediaPlayer != null) {
+            IjkMediaPlayer.postEventFromNative(new WeakReference(mMediaPlayer),IjkMediaPlayer.MEDIA_INFO, IMediaPlayer.MEDIA_INFO_VIDEO_ROTATION_CHANGED, rotateDegrees, null);
+        }
+    }
+
+    public int getVideoRotationDegree() {
+        return mVideoRotationDegree;
     }
 }

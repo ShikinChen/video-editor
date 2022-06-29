@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -33,6 +34,14 @@ class MainActivity : AppCompatActivity() {
 
     private val mediaProgressBar: MediaProgressBar by lazy {
         findViewById(R.id.media_progress_bar)
+    }
+
+    private val leftRotateBtn: Button by lazy {
+        findViewById(R.id.left_rotate_btn)
+    }
+
+    private val rightRotateBtn: Button by lazy {
+        findViewById(R.id.right_rotate_btn)
     }
 
     private val videoView: IjkVideoView by lazy {
@@ -77,6 +86,14 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "startTime:${mediaEditor.startTime}\tendTime:${mediaEditor.endTime}")
         }
 
+        rightRotateBtn.setOnClickListener {
+            videoView.setVideoRotation(videoView.videoRotationDegree + 90)
+        }
+
+        leftRotateBtn.setOnClickListener {
+            videoView.setVideoRotation(videoView.videoRotationDegree - 90)
+        }
+
         PermissionX.init(this)
             .permissions(
                 Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -101,6 +118,8 @@ class MainActivity : AppCompatActivity() {
         IjkMediaPlayer.loadLibrariesOnce(null)
         IjkMediaPlayer.native_profileBegin("libijkplayer.so")
         videoView.setVideoPath(filename)
+        //TODO 暂时使用TextureView为了预览时候可以旋转
+        videoView.setRender(IjkVideoView.RENDER_TEXTURE_VIEW)
 //        videoView.start()
     }
 
