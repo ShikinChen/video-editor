@@ -21,8 +21,7 @@ void MediaEditor::Open(const char *filename) {
   demuxer_->InitDemuxer();
   demuxer_->set_media_(media_);
 
-  muxer_->InitMuxer();
-  muxer_->set_media_(media_);
+  muxer_->InitMuxer(media_);
 }
 void MediaEditor::DumpImageList(int64_t start_time,
 								int64_t end_time,
@@ -45,11 +44,15 @@ void MediaEditor::DumpImageList(int64_t start_time,
 int64_t MediaEditor::Duration() {
   return demuxer_->Duration();
 }
-void MediaEditor::save(int64_t start_time,
+void MediaEditor::Save(int64_t start_time,
 					   int64_t end_time,
-					   int width,
-					   int height,
 					   const char *out_filename,
 					   std::function<void(const char *)> callback) {
+  thread thread_([=] {
+	muxer_->Muxing(start_time,
+				   end_time,
+				   out_filename);
+  });
+  thread_.detach();
 
 }

@@ -25,19 +25,28 @@ class Muxer {
   explicit Muxer();
   virtual ~Muxer();
 
-  int32_t InitMuxer();
-  void set_media_(const std::shared_ptr<Media> &media);
+  int32_t InitMuxer(const std::shared_ptr<Media> &media);
+  void DestroyMuxer();
 
-  void Cut(int64_t start_time,
-		   int64_t end_time, const char *out_filename);
+  void Muxing(int64_t start_time,
+			  int64_t end_time, const char *out_filename);
 
  private:
-  AVFrame *frame_ = nullptr;
+  int32_t WriteFrame(AVFormatContext *output_fmt_ctx,
+					 AVCodecContext *encodec_ctx,
+					 const AVFrame *frame,
+					 AVPacket *pkt,
+					 uint8_t stream_index,
+					 int64_t duration = -1
+  );
+ private:
+//  AVFrame *frame_ = nullptr;
   AVPacket *pkt_ = nullptr;
 
   std::shared_ptr<Media> media_;
   std::unique_ptr<VideoEncoder> video_encoder_;
   std::unique_ptr<AudioEncoder> audio_encoder_;
+
 };
 
 #endif //EDITOR_APP_SRC_MAIN_CPP_MUXER_H_

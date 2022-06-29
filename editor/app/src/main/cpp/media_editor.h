@@ -19,8 +19,7 @@ class MediaEditor {
 					 int img_height,
 					 const char *out_filename, std::function<void(const char *img_filename, int index)> callback);
 
-  void save(int64_t start_time, int64_t end_time, int width,
-			int height,
+  void Save(int64_t start_time, int64_t end_time,
 			const char *out_filename, std::function<void(const char *out_filename)> callback);
 
   int64_t Duration();

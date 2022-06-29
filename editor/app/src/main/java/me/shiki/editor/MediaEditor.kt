@@ -41,6 +41,12 @@ class MediaEditor {
         native_DumpImageList(startTime, endTime, imgSize, imgWidth, imgHeight, outFilename)
     }
 
+    fun save(
+        outFilename: String, startTime: Long = 0, endTime: Long = duration(),
+    ) {
+        native_Save(startTime, endTime, outFilename)
+    }
+
     private fun dumpImageListCallback(filename: String, index: Int) {
         Log.d(TAG, "filename:$filename,index:$index")
         dumpImageCallback?.invoke(filename, index)
@@ -63,4 +69,9 @@ class MediaEditor {
     private external fun native_Duration(): Long
 
     private external fun native_Init()
+
+    private external fun native_Save(
+        startTime: Long, endTime: Long,
+        outFilename: String
+    )
 }

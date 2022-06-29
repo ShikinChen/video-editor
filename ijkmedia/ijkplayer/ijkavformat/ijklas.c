@@ -1571,7 +1571,7 @@ static void dump_multi_rate_flv_context(PlayList* c) {
     for (int j = 0; j < adaptation_set_item->n_representation; j++) {
         Representation* representation_item = adaptation_set_item->representations[j];
         av_log(NULL, AV_LOG_DEBUG, "{\n");
-        av_log(NULL, AV_LOG_DEBUG, "    id: %d \n", representation_item->id);
+        av_log(NULL, AV_LOG_DEBUG, "    codec_id: %d \n", representation_item->id);
         av_log(NULL, AV_LOG_DEBUG, "    bitrate: %d \n", representation_item->bitrate);
         av_log(NULL, AV_LOG_DEBUG, "    url: \"%s\" \n", representation_item->url);
         av_log(NULL, AV_LOG_DEBUG, "}\n");
@@ -1584,7 +1584,7 @@ static int parse_representation_set(Representation* c, cJSON* root) {
         cJSON* child_json = cJSON_GetArrayItem(root, i);
         switch (child_json->type) {
             case cJSON_Number:
-                if (!strcmp(child_json->string, "id")) {
+                if (!strcmp(child_json->string, "codec_id")) {
                     c->id = (int)child_json->valuedouble;
                 } else if (!strcmp(child_json->string, "maxBitrate")) {
                     c->bitrate = (int)child_json->valuedouble;

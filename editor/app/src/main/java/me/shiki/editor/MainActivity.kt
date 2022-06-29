@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.save -> {
-
+                mediaEditor.save("${sdPath}/Save.mp4", 10000, 20000)
             }
         }
         return super.onOptionsItemSelected(item)

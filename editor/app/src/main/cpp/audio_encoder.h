@@ -16,6 +16,7 @@ extern "C" {
 #include <libavutil/common.h>
 #include <libavutil/frame.h>
 #include <libavutil/samplefmt.h>
+#include <libavformat/avformat.h>
 };
 
 class AudioEncoder {
@@ -23,8 +24,20 @@ class AudioEncoder {
   explicit AudioEncoder(const AVCodec *codec);
   virtual ~AudioEncoder();
 
+  int32_t OpenCodecCtx();
+  void DestroyAudioEncoder();
+
+  AVFrame * CreateFrame();
+  void DestroyFrame();
+
+  AVCodecContext *codec_ctx() const;
+  AVCodecID codec_id() const;
+
+  AVFrame *frame() const;
  private:
+  AVFrame *frame_ = nullptr;
   const AVCodec *codec_;
+  AVCodecContext *codec_ctx_ = nullptr;
 };
 
 std::unique_ptr<AudioEncoder> FindAudioEncoder(const char *codec_name = "AAC");

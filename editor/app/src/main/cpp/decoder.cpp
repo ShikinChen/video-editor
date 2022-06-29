@@ -41,11 +41,24 @@ int32_t Decoder::OpenCodecContext(int *stream_idx,
   int stream_index = result;
   result = -1;
   AVStream *st = fmt_ctx->streams[stream_index];
-  AVCodec *dec = avcodec_find_decoder(st->codecpar->codec_id);
+
+  AVCodec *dec = nullptr;
+  bool is_h264_mediacodec = true;
+  if (st->codecpar->codec_id==AV_CODEC_ID_H264) {
+	//TODO 暂时无法使用硬编码
+//	dec = avcodec_find_decoder_by_name("h264_mediacodec");
+  }
+  if (!dec) {
+	is_h264_mediacodec = false;
+	dec = avcodec_find_decoder(st->codecpar->codec_id);
+  }
+
   if (!dec) {
 	LOGE("Error: Failed to find codec:%s", av_get_media_type_string(type))
 	return result;
   }
+
+  LOGD("codec name:%s", dec->name)
   *dec_ctx = avcodec_alloc_context3(dec);
   if (!*dec_ctx) {
 	LOGE("Error: Failed to alloc codec context:%s", av_get_media_type_string(type))
@@ -56,11 +69,17 @@ int32_t Decoder::OpenCodecContext(int *stream_idx,
 	LOGE("Error: Failed to copy codec parameters to decoder context.")
 	return result;
   }
+  if (is_h264_mediacodec) {
+//	(*dec_ctx)->thread_count = 1;
+  }
+
   result = avcodec_open2(*dec_ctx, dec, nullptr);
+
   if (result < 0) {
-	LOGE("Error: Error: Could not open %s codec", av_get_media_type_string(type))
+	LOGE("Error: Error: Could not open %s codec\t%s", av_get_media_type_string(type), av_err2str(result))
 	return result;
   }
+
   *stream_idx = stream_index;
   return result;
 }
@@ -82,23 +101,30 @@ AVCodecContext *Decoder::audio_dec_ctx() const {
   return audio_dec_ctx_;
 }
 void Decoder::Decoding(int64_t start_time,
-					   int64_t end_time, std::function<void(const AVFrame *)> callback) {
+					   int64_t end_time, std::function<int32_t(const AVFrame *, int)> callback) {
   AVPacket *pkt = av_packet_alloc();
   AVFrame *frame = av_frame_alloc();
   int32_t result = -1;
+  int8_t retry_count = 3;
+  bool is_video_end = false;
+  bool is_audio_end = false;
 
   int64_t start = MediaUtils::ToAVTime(start_time);
-  if (start > 0) {
-	avformat_seek_file(media_->format_ctx(), -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
-  }
+//  if (start > 0) {
+  avformat_seek_file(media_->format_ctx(), -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+//  }
 
   while (av_read_frame(media_->format_ctx(), pkt) >= 0) {
-	AVCodecContext *codec_ctx;
+	AVCodecContext *codec_ctx = nullptr;
+	AVRational time_base;
 	if (pkt->stream_index==media_->video_stream_index()) {
 	  codec_ctx = video_dec_ctx_;
+	  time_base = media_->video_stream()->time_base;
 	} else if (pkt->stream_index==media_->audio_stream_index()) {
 	  codec_ctx = audio_dec_ctx_;
+	  time_base = media_->audio_stream()->time_base;
 	}
+
 	result = avcodec_send_packet(codec_ctx, pkt);
 	while (result >= 0) {
 	  result = avcodec_receive_frame(codec_ctx, frame);
@@ -111,15 +137,31 @@ void Decoder::Decoding(int64_t start_time,
 		LOGE("Error:during decoding:%s", av_err2str(result))
 		break;
 	  }
-	  callback(frame);
-	  int64_t end = frame->pts/AV_TIME_BASE;
-	  LOGD("frame->pts:%ld", end);
-	  av_frame_unref(frame);
-	  if (end >= end_time) {
+
+	  int64_t time = MediaUtils::ToMillisecond(frame->pts, time_base);
+	  if ((time > end_time || time < start_time) && retry_count > 0) {
+		retry_count -= 1;
 		break;
+	  }
+	  LOGD("[frame]time:%ld,pts:%ld", time,frame->pts)
+	  if (callback(frame, pkt->stream_index) < 0) {
+		is_video_end = true;
+		is_audio_end = true;
+	  }
+	  av_frame_unref(frame);
+	  if (time >= end_time) {
+		if (!is_video_end && pkt->stream_index==media_->video_stream_index()) {
+		  is_video_end = true;
+		}
+		if (!is_audio_end && pkt->stream_index==media_->audio_stream_index()) {
+		  is_audio_end = true;
+		}
 	  }
 	}
 	av_packet_unref(pkt);
+	if (is_video_end && is_audio_end) {
+	  break;
+	}
   }
   if (pkt) {
 	av_packet_free(&pkt);

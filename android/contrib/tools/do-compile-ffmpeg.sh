@@ -211,7 +211,7 @@ FF_CFLAGS="-O3 -Wall -pipe \
     -std=c99 \
     -ffast-math \
     -fstrict-aliasing -Werror=strict-aliasing \
-    -Wno-psabi -Wa,--noexecstack \
+    -Wa,--noexecstack \
     -DANDROID -DNDEBUG"
 
 # cause av_strlcpy crash with gcc4.7, gcc4.8
@@ -259,6 +259,12 @@ if [ -f "${FF_DEP_X264_LIB}/libx264.a" ]; then
     FF_DEP_LIBS="$FF_DEP_LIBS -L${FF_DEP_X264_LIB} -lx264"
 fi
 
+#增加mediacodec解码
+FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-mediacodec"
+FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-jni"
+FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-decoder=h264_mediacodec"
+FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-decoder=mpeg4_mediacodec"
+FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-hwaccels"
 
 FF_CFG_FLAGS="$COMMON_FF_CFG_FLAGS $FF_CFG_FLAGS"
 
@@ -269,7 +275,7 @@ FF_CFG_FLAGS="$FF_CFG_FLAGS --prefix=$FF_PREFIX"
 # Advanced options (experts only):
 FF_CFG_FLAGS="$FF_CFG_FLAGS --cross-prefix=${FF_CROSS_PREFIX}-"
 FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-cross-compile"
-FF_CFG_FLAGS="$FF_CFG_FLAGS --target-os=linux"
+FF_CFG_FLAGS="$FF_CFG_FLAGS --target-os=android"
 FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-pic"
 # FF_CFG_FLAGS="$FF_CFG_FLAGS --disable-symver"
 

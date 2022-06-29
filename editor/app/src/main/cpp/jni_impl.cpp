@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 #include <libavformat/avformat.h>
+#include <libavcodec/jni.h>
 
 const char *kNativeRenderClassName = "me/shiki/editor/MediaEditor";
 MediaEditor *media_editor_ = nullptr;
@@ -49,6 +50,20 @@ JNIEXPORT void JNICALL DumpImageList(JNIEnv *env,
   }
 }
 
+JNIEXPORT void JNICALL Save(JNIEnv *env,
+							jobject instance,
+							jlong j_start_time,
+							jlong j_end_time,
+							jstring j_out_filename) {
+  if (media_editor_) {
+	const char *out_filename = env->GetStringUTFChars(j_out_filename, nullptr);
+	media_editor_->Save(j_start_time, j_end_time, out_filename, [=](const char *out_filename) {
+
+	});
+	env->ReleaseStringUTFChars(j_out_filename, out_filename);
+  }
+}
+
 JNIEXPORT jlong JNICALL Duration(JNIEnv *env,
 								 jobject instance) {
   jlong duration = -1;
@@ -69,15 +84,23 @@ JNIEXPORT void JNICALL EncodingDecodingInfo(JNIEnv *env, jobject instance) {
   while ((c_tmp = av_codec_iterate(&opaque))) {
 	switch (c_tmp->type) {
 	  case AVMEDIA_TYPE_VIDEO: {
-		LOGD("[Video]:%s", c_tmp->name);
+		if(c_tmp->decode){
+		  LOGD("[DEC][Video]:%s", c_tmp->name)
+		}else{
+		  LOGD("[ENC][Video]:%s", c_tmp->name)
+		}
 	  }
 		break;
 	  case AVMEDIA_TYPE_AUDIO: {
-		LOGD("[Audio]:%s", c_tmp->name);
+		  if(c_tmp->decode){
+			LOGD("[DEC][Audio]:%s", c_tmp->name)
+		  }else{
+			LOGD("[ENC][Audio]:%s", c_tmp->name)
+		  }
 	  }
 		break;
 	  default: {
-		LOGD("[Other]:%s", c_tmp->name);
+		LOGD("[Other]:%s", c_tmp->name)
 	  }
 		break;
 	}
@@ -90,6 +113,7 @@ static JNINativeMethod kMethods[] = {
 	{"native_EncodingDecodingInfo", "()V", (void *)(EncodingDecodingInfo)},
 	{"native_DumpImageList", "(JJIIILjava/lang/String;)V", (void *)(DumpImageList)},
 	{"native_Duration", "()J", (jlong *)(Duration)},
+	{"native_Save", "(JJLjava/lang/String;)V", (void *)(Save)},
 };
 
 static int RegisterNativeMethods(JNIEnv *env, const char *className, JNINativeMethod *methods, int methodNum) {
@@ -120,7 +144,7 @@ JNIEXPORT JNICALL jint JNI_OnLoad(JavaVM *jvm, void *p) {
   if (regRet!=JNI_TRUE) {
 	return JNI_ERR;
   }
-
+  av_jni_set_java_vm(jvm, nullptr);
   return JNI_VERSION_1_6;
 }
 

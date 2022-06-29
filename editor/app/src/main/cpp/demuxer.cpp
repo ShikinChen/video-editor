@@ -60,7 +60,7 @@ void Demuxer::DumpImageList(int64_t start_time,
   char *filename = strdup(out_filename);
   LOGD("out_filename:%s", filename)
   unique_lock<mutex> lock(dump_image_mutex_);
-  long time = MediaUtils::ToTimeByMillisecond(media_->video_stream());
+  long time = MediaUtils::ToMillisecondByAVStream(media_->video_stream());
   AVRational time_base = media_->video_stream()->time_base;
   long step = MediaUtils::ToAVTime((end_time - start_time)/img_size);
 
@@ -116,7 +116,7 @@ void Demuxer::DumpImageList(int64_t start_time,
 	if (pkt_->stream_index==media_->video_stream_index()) {
 	  int32_t ret = avcodec_send_packet(media_->decoder()->video_dec_ctx(), pkt_);
 	  if (ret < 0) {
-		LOGE("Error: avcodec_send_packet failed.")
+		LOGE("Error: avcodec_send_packet failed\t%s.", av_err2str(ret))
 		break;
 	  }
 	  while (ret >= 0 && img_count < img_size) {
@@ -124,15 +124,17 @@ void Demuxer::DumpImageList(int64_t start_time,
 		if (ret < 0) {
 		  if (ret==AVERROR_EOF || ret==AVERROR(EAGAIN)) {
 			av_frame_unref(frame_);
+			av_packet_unref(pkt_);
 			break;
 		  }
+		  av_packet_unref(pkt_);
 		  av_frame_unref(frame_);
 		  LOGE("Error:during decoding:%s", av_err2str(ret))
 		  break;
 		}
 		if (frame_->pict_type==AV_PICTURE_TYPE_I) {
 		  LOGD("pict_type:AV_PICTURE_TYPE_I")
-		  long frame_time = MediaUtils::ToTimeByMillisecond(frame_->pts, time_base);
+		  long frame_time = MediaUtils::ToMillisecond(frame_->pts, time_base);
 		  LOGD("frame_time:%ld,start:%ld", frame_time, start)
 		  img_count++;
 
@@ -234,7 +236,7 @@ void Demuxer::CreateImgConvertAndCodecCtx(SwsContext **img_convert_ctx, AVCodecC
 }
 int64_t Demuxer::Duration() {
   if (media_->format_ctx()) {
-	return media_->format_ctx()->duration/MediaUtils::kMillisecondUnit;
+	return media_->format_ctx()->duration/kMillisecondUnit;
   }
   return -1;
 }
