@@ -27,7 +27,8 @@ class Decoder {
   void DestroyDecoder();
 
   void Decoding(int64_t start_time,
-				   int64_t end_time, std::function<int32_t(const AVFrame *frame,int stream_index)> callback);
+				int64_t end_time,
+				std::function<int32_t(const AVFrame *frame, int stream_index, int64_t curr_millisecond)> callback);
 
   AVCodecContext *video_dec_ctx() const;
   AVCodecContext *audio_dec_ctx() const;

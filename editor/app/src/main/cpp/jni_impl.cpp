@@ -57,8 +57,11 @@ JNIEXPORT void JNICALL Save(JNIEnv *env,
 							jstring j_out_filename) {
   if (media_editor_) {
 	const char *out_filename = env->GetStringUTFChars(j_out_filename, nullptr);
-	media_editor_->Save(j_start_time, j_end_time, out_filename, [=](const char *out_filename) {
-
+	media_editor_->Save(j_start_time, j_end_time, out_filename, [=](const char *out_filename,
+																	int64_t curr_millisecond,
+																	int64_t total_millisecond) {
+	  LOGD("curr_millisecond:%ld\ttotal_millisecond:%ld", curr_millisecond, total_millisecond)
+	  call_java_media_editor_->MuxingListCallback(out_filename, curr_millisecond, total_millisecond, Other);
 	});
 	env->ReleaseStringUTFChars(j_out_filename, out_filename);
   }
@@ -84,19 +87,19 @@ JNIEXPORT void JNICALL EncodingDecodingInfo(JNIEnv *env, jobject instance) {
   while ((c_tmp = av_codec_iterate(&opaque))) {
 	switch (c_tmp->type) {
 	  case AVMEDIA_TYPE_VIDEO: {
-		if(c_tmp->decode){
+		if (c_tmp->decode) {
 		  LOGD("[DEC][Video]:%s", c_tmp->name)
-		}else{
+		} else {
 		  LOGD("[ENC][Video]:%s", c_tmp->name)
 		}
 	  }
 		break;
 	  case AVMEDIA_TYPE_AUDIO: {
-		  if(c_tmp->decode){
-			LOGD("[DEC][Audio]:%s", c_tmp->name)
-		  }else{
-			LOGD("[ENC][Audio]:%s", c_tmp->name)
-		  }
+		if (c_tmp->decode) {
+		  LOGD("[DEC][Audio]:%s", c_tmp->name)
+		} else {
+		  LOGD("[ENC][Audio]:%s", c_tmp->name)
+		}
 	  }
 		break;
 	  default: {

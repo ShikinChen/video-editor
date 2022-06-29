@@ -36,14 +36,19 @@ int32_t Muxer::InitMuxer(const std::shared_ptr<Media> &media) {
   }
   return 0;
 }
-void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filename) {
+void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filename,std::function<void(const char *out_filename,int64_t curr_millisecond, int64_t total_millisecond)> callback) {
   AVFormatContext *output_fmt_ctx = nullptr;
+  int64_t total_millisecond=end_time-start_time;
+  const char *filename= strdup(out_filename);
+  if(callback){
+	callback(filename,total_millisecond,total_millisecond);
+  }
   if (media_) {
 	int64_t start_pts=0;
 
-	avformat_alloc_output_context2(&output_fmt_ctx, nullptr, nullptr, out_filename);
+	avformat_alloc_output_context2(&output_fmt_ctx, nullptr, nullptr, filename);
 	if (!output_fmt_ctx) {
-	  LOGE("Error:could not avformat_alloc_output_context2")
+	  LOGE("Error:could not avformat_alloc_output_context2 out_filename:%s",filename)
 	  return;
 	}
 
@@ -99,9 +104,9 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
 	vector<int64_t> pts_start(nb_streams);
 
 	if (!(fmt->flags & AVFMT_NOFILE)) {
-	  int32_t result = avio_open(&output_fmt_ctx->pb, out_filename, AVIO_FLAG_WRITE);
+	  int32_t result = avio_open(&output_fmt_ctx->pb, filename, AVIO_FLAG_WRITE);
 	  if (result < 0) {
-		LOGE("Error: avio_open output file failed!")
+		LOGE("Error: avio_open output file failed! out_filename:%s",filename)
 		goto destroy;
 	  }
 	}
@@ -115,16 +120,12 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
 
 	video_encoder_->CreateFrame();
 	audio_encoder_->CreateFrame();
-	int64_t cur_video_pts = 0;//视频包的时间戳
-	int64_t cur_audio_pts = 0;//音频包的时间戳
-
-	const AVStream * in_video_st=media_->video_stream();
-	const AVStream * in_audio_st=media_->audio_stream();
-
 
 	AVCodecContext * encodec_ctx= nullptr;
 
-	media_->decoder()->Decoding(start_time, end_time, [&](const AVFrame *frame, int stream_index) {
+	media_->decoder()->Decoding(start_time, end_time, [&](const AVFrame *frame,
+			int stream_index
+			,int64_t curr_millisecond) {
 	  AVFrame *new_frame= nullptr;
 	  AVStream * stream= nullptr;
 	  if(stream_index==media_->video_stream_index()){
@@ -167,44 +168,27 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
 //	  LOGD("[frame]id:%d\tpts:%ld\tdts:%ld",stream->id,new_frame->pts,new_frame->pkt_dts)
 //	  new_frame->pkt_dts=frame->pkt_dts-dts_start[stream->id];
 	  if(encodec_ctx){
-		result=	avcodec_send_frame(encodec_ctx,new_frame);
-		if (result < 0) {
-		  LOGE ("Error:avcodec_send_frame failed:%s" , av_err2str(result))
-		  return result;
-		}
-		while (result>=0){
-		  result = avcodec_receive_packet(encodec_ctx, pkt_);
-		  if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) {
-			break;
-		  } else if (result < 0) {
-			LOGE ("Error:avcodec_receive_packet failed" )
-			break;
-		  }
-
-		  pkt_->stream_index = stream->id;
-		  pkt_->duration=frame->pkt_duration;
-
-		  LOGD("[pkt]id:%d\tpts:%ld\tdts:%ld",stream->id,pkt_->pts,pkt_->dts)
-		  av_interleaved_write_frame(output_fmt_ctx,pkt_);
-
-		  av_packet_unref(pkt_);
-		}
+		result=	WriteFrame(output_fmt_ctx,encodec_ctx, new_frame,pkt_, stream->id,frame->pkt_duration);
 	  }
-
-	  if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) {
-		result=0;
+	  if(callback){
+		callback(filename,curr_millisecond-start_time-kMillisecondUnit/10,total_millisecond);
 	  }
 	  return result;
 	});
 
 	WriteFrame(output_fmt_ctx,video_encoder_->codec_ctx(), nullptr,pkt_, video_stream->id);
+	WriteFrame(output_fmt_ctx,audio_encoder_->codec_ctx(), nullptr,pkt_, audio_stream->id);
 
 	if(output_fmt_ctx){
 	  av_write_trailer(output_fmt_ctx);
 	}
+	if(callback){
+	  callback(filename,total_millisecond,total_millisecond);
+	}
   }
   goto destroy;
   destroy:
+  	delete filename;
   	video_encoder_->DestroyFrame();
 	audio_encoder_->DestroyFrame();
 
@@ -221,23 +205,30 @@ int32_t Muxer::WriteFrame(AVFormatContext *output_fmt_ctx,
 						  AVPacket *pkt,
 						  uint8_t stream_index,
 						  int64_t duration){
-  int32_t result=-1;
-  encodec_ctx=video_encoder_->codec_ctx();
+	int32_t result=-1;
 	result=	avcodec_send_frame(encodec_ctx, frame);
 	if (result < 0) {
 	  LOGE("Error:could not av_frame_make_writable stream_index:%d\t%s",stream_index, av_err2str(result))
 	  return result;
 	}
-	result = avcodec_receive_packet(encodec_ctx, pkt_);
-	if(result<0){
-	  LOGE("Error:could not avcodec_receive_packet stream_index:%d\t%s",stream_index, av_err2str(result))
-	  return result;
+	while (result>=0) {
+	  result = avcodec_receive_packet(encodec_ctx, pkt);
+	  if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) {
+		break;
+	  } else if (result < 0) {
+		LOGE ("Error:avcodec_receive_packet failed  stream_index:%d\t%s", stream_index, av_err2str(result) )
+		break;
+	  }
+	  pkt->stream_index = stream_index;
+	  if (duration > 0) {
+		pkt->duration = duration;
+	  }
+	  av_interleaved_write_frame(output_fmt_ctx, pkt);
+	  av_packet_unref(pkt);
 	}
-	pkt->stream_index = stream_index;
-	if(duration>0){
-	  pkt->duration = duration;
+	if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) {
+	  result=0;
 	}
-	av_interleaved_write_frame(output_fmt_ctx,pkt);
 	return result;
 }
 void Muxer::DestroyMuxer() {

@@ -101,18 +101,20 @@ AVCodecContext *Decoder::audio_dec_ctx() const {
   return audio_dec_ctx_;
 }
 void Decoder::Decoding(int64_t start_time,
-					   int64_t end_time, std::function<int32_t(const AVFrame *, int)> callback) {
+					   int64_t end_time, std::function<int32_t(const AVFrame *, int, int64_t)> callback) {
   AVPacket *pkt = av_packet_alloc();
   AVFrame *frame = av_frame_alloc();
   int32_t result = -1;
   int8_t retry_count = 3;
   bool is_video_end = false;
   bool is_audio_end = false;
+  //TODO 提高截取精度
+  if (start_time > 0) {
+	start_time -= video_dec_ctx_->gop_size*av_q2d(video_dec_ctx_->time_base)*kMillisecondUnit;
+  }
 
   int64_t start = MediaUtils::ToAVTime(start_time);
-//  if (start > 0) {
   avformat_seek_file(media_->format_ctx(), -1, start, start, INT64_MAX, AVSEEK_FLAG_BACKWARD);
-//  }
 
   while (av_read_frame(media_->format_ctx(), pkt) >= 0) {
 	AVCodecContext *codec_ctx = nullptr;
@@ -138,18 +140,18 @@ void Decoder::Decoding(int64_t start_time,
 		break;
 	  }
 
-	  int64_t time = MediaUtils::ToMillisecond(frame->pts, time_base);
-	  if ((time > end_time || time < start_time) && retry_count > 0) {
+	  int64_t curr_millisecond = MediaUtils::ToMillisecond(frame->pts, time_base);
+	  if ((curr_millisecond > end_time || curr_millisecond < start_time) && retry_count > 0) {
 		retry_count -= 1;
 		break;
 	  }
-	  LOGD("[frame]time:%ld,pts:%ld", time,frame->pts)
-	  if (callback(frame, pkt->stream_index) < 0) {
+	  LOGD("[frame]curr_millisecond:%ld,pts:%ld", curr_millisecond, frame->pts)
+	  if (!callback || callback(frame, pkt->stream_index, curr_millisecond) < 0) {
 		is_video_end = true;
 		is_audio_end = true;
 	  }
 	  av_frame_unref(frame);
-	  if (time >= end_time) {
+	  if (curr_millisecond >= end_time) {
 		if (!is_video_end && pkt->stream_index==media_->video_stream_index()) {
 		  is_video_end = true;
 		}

@@ -33,6 +33,9 @@ class Media : public std::enable_shared_from_this<Media> {
   AVStream *audio_stream() const;
 
   const std::unique_ptr<Decoder> &decoder() const;
+
+  int64_t Duration();
+
  private:
   AVFormatContext *format_ctx_ = nullptr;
 

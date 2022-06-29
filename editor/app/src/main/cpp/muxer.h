@@ -20,6 +20,8 @@ extern "C" {
 #include "video_encoder.h"
 #include "audio_encoder.h"
 
+#include "call_java_media_editor.h"
+
 class Muxer {
  public:
   explicit Muxer();
@@ -29,7 +31,9 @@ class Muxer {
   void DestroyMuxer();
 
   void Muxing(int64_t start_time,
-			  int64_t end_time, const char *out_filename);
+			  int64_t end_time,
+			  const char *out_filename,
+			  std::function<void(const char *out_filename,int64_t curr_millisecond, int64_t total_millisecond)> callback);
 
  private:
   int32_t WriteFrame(AVFormatContext *output_fmt_ctx,

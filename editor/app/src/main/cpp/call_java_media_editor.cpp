@@ -14,6 +14,7 @@ CallJavaMediaEditor::CallJavaMediaEditor(JavaVM *java_vm, JNIEnv *jni_env, jobje
   }
   jclass j_clz = jni_env->GetObjectClass(j_obj_);
   jmid_dumpImageListCallback_ = jni_env->GetMethodID(j_clz, "dumpImageListCallback", "(Ljava/lang/String;I)V");
+  jmid_muxingCallback_ = jni_env->GetMethodID(j_clz, "muxingCallback", "(Ljava/lang/String;JJ)V");
 }
 CallJavaMediaEditor::~CallJavaMediaEditor() {
   if (jni_env_ && j_obj_) {
@@ -25,7 +26,7 @@ void CallJavaMediaEditor::DumpImageListCallback(const char *filename, int index,
   switch (thread_type) {
 	case Main: {
 	  jstring j_filename = jni_env_->NewStringUTF(filename);
-	  jni_env_->CallVoidMethod(j_obj_, jmid_dumpImageListCallback_, filename, index);
+	  jni_env_->CallVoidMethod(j_obj_, jmid_dumpImageListCallback_, j_filename, index);
 	  jni_env_->DeleteLocalRef(j_filename);
 	}
 	  break;
@@ -38,6 +39,32 @@ void CallJavaMediaEditor::DumpImageListCallback(const char *filename, int index,
 	  }
 	  jstring j_filename = jni_env->NewStringUTF(filename);
 	  jni_env->CallVoidMethod(j_obj_, jmid_dumpImageListCallback_, j_filename, index);
+	  jni_env->DeleteLocalRef(j_filename);
+	  java_vm_->DetachCurrentThread();
+	}
+	  break;
+  }
+}
+void CallJavaMediaEditor::MuxingListCallback(const char *filename,
+											 int64_t curr_millisecond,
+											 int64_t total_millisecond,
+											 ThreadType thread_type) {
+  switch (thread_type) {
+	case Main: {
+	  jstring j_filename = jni_env_->NewStringUTF(filename);
+	  jni_env_->CallVoidMethod(j_obj_, jmid_muxingCallback_, j_filename, curr_millisecond, total_millisecond);
+	  jni_env_->DeleteLocalRef(j_filename);
+	}
+	  break;
+	case Other: {
+	  JNIEnv *jni_env;
+	  java_vm_->AttachCurrentThread(&jni_env, nullptr);
+	  if (!jni_env) {
+		LOGE("AttachCurrentThread fail")
+		return;
+	  }
+	  jstring j_filename = jni_env->NewStringUTF(filename);
+	  jni_env->CallVoidMethod(j_obj_, jmid_muxingCallback_, j_filename, curr_millisecond, total_millisecond);
 	  jni_env->DeleteLocalRef(j_filename);
 	  java_vm_->DetachCurrentThread();
 	}

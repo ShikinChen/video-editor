@@ -62,6 +62,9 @@ class MainActivity : AppCompatActivity() {
                 mediaProgressBar.setImgView(index, filename)
             }
         }
+        mediaEditor.muxingCallback = { filename, currMillisecond, totalMillisecond ->
+            Log.d(TAG, "currMillisecond:$currMillisecond,totalMillisecond:$totalMillisecond")
+        }
         mediaProgressBar.onProgressBarPointChangeListener = {
             Log.d(TAG, "value:$it")
             val duration = mediaEditor.duration()
@@ -120,7 +123,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.save -> {
-                mediaEditor.save("${sdPath}/Save.mp4", 10000, 20000)
+                mediaEditor.save("${sdPath}/save.mp4", 10000, 20000)
             }
         }
         return super.onOptionsItemSelected(item)

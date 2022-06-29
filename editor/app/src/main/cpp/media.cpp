@@ -4,6 +4,7 @@
 
 #include "media.h"
 #include "android_log.h"
+#include "constant.h"
 
 Media::Media() {
 
@@ -29,7 +30,7 @@ int32_t Media::Init(const char *filename) {
   }
 
   decoder_ = make_unique<Decoder>(shared_from_this());
-  result=decoder_->InitDecoder(&video_stream_index_,&audio_stream_index_);
+  result = decoder_->InitDecoder(&video_stream_index_, &audio_stream_index_);
   if (result < 0) {
 	LOGE("Error: InitDecoder failed.")
 	return result;
@@ -37,7 +38,6 @@ int32_t Media::Init(const char *filename) {
   video_stream_ = format_ctx_->streams[video_stream_index_];
   audio_stream_ = format_ctx_->streams[audio_stream_index_];
   av_dump_format(format_ctx_, 0, filename, 0);
-
 
   return result;
 }
@@ -65,4 +65,11 @@ AVStream *Media::audio_stream() const {
 }
 const std::unique_ptr<Decoder> &Media::decoder() const {
   return decoder_;
+}
+
+int64_t Media::Duration() {
+  if (format_ctx_) {
+	return format_ctx_->duration/kMillisecondUnit;
+  }
+  return -1;
 }

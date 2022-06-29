@@ -235,10 +235,7 @@ void Demuxer::CreateImgConvertAndCodecCtx(SwsContext **img_convert_ctx, AVCodecC
   avcodec_open2(*img_codec_ctx, encoder, nullptr);
 }
 int64_t Demuxer::Duration() {
-  if (media_->format_ctx()) {
-	return media_->format_ctx()->duration/kMillisecondUnit;
-  }
-  return -1;
+  return media_->Duration();
 }
 void Demuxer::set_media_(const shared_ptr<Media> &media) {
   media_ = media;

@@ -15,7 +15,11 @@ class CallJavaMediaEditor {
   CallJavaMediaEditor(JavaVM *java_vm, JNIEnv *jni_env, jobject *j_obj);
   virtual ~CallJavaMediaEditor();
 
-  void DumpImageListCallback(const char *filename, int index,ThreadType thread_type=Main);
+  void DumpImageListCallback(const char *filename, int index, ThreadType thread_type = Main);
+  void MuxingListCallback(const char *filename,
+						  int64_t curr_millisecond,
+						  int64_t total_millisecond,
+						  ThreadType thread_type = Main);
 
  private:
   JavaVM *java_vm_ = nullptr;
@@ -23,6 +27,7 @@ class CallJavaMediaEditor {
   jobject j_obj_ = nullptr;
 
   jmethodID jmid_dumpImageListCallback_;
+  jmethodID jmid_muxingCallback_;
 };
 
 #endif //EDITOR_APP_SRC_MAIN_CPP_CALL_JAVA_MEDIA_EDITOR_H_
