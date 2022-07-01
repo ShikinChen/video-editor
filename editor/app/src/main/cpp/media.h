@@ -32,6 +32,10 @@ class Media : public std::enable_shared_from_this<Media> {
   AVStream *video_stream() const;
   AVStream *audio_stream() const;
 
+  int width() const;
+  int height() const;
+  AVPixelFormat pix_fmt() const;
+
   const std::unique_ptr<Decoder> &decoder() const;
 
   int64_t Duration();

@@ -7,6 +7,8 @@
 #include "media_utils.h"
 #include <vector>
 
+#include "filter/video_filter.h"
+
 using namespace std;
 
 Muxer::Muxer() {
@@ -36,14 +38,44 @@ int32_t Muxer::InitMuxer(const std::shared_ptr<Media> &media) {
   }
   return 0;
 }
-void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filename,std::function<void(const char *out_filename,int64_t curr_millisecond, int64_t total_millisecond)> callback) {
+void Muxer::Muxing(int64_t start_time, int64_t end_time,int rotate_degrees, const char *out_filename,std::function<void(const char *out_filename,int64_t curr_millisecond, int64_t total_millisecond)> callback) {
   AVFormatContext *output_fmt_ctx = nullptr;
   int64_t total_millisecond=end_time-start_time;
   const char *filename= strdup(out_filename);
+  AVFrame *filter_frame= nullptr;
+
   if(callback){
-	callback(filename,total_millisecond,total_millisecond);
+	callback(filename,0,total_millisecond);
   }
   if (media_) {
+	int width=media_->width();
+	int height=media_->height();
+	char *filter_descr= "vflip";
+	switch (rotate_degrees) {
+	  case 90:case -270:{
+		width=media_->height();
+		height=media_->width();
+		filter_descr="transpose=1";
+	  }break;
+	  case 180:  case -180:{
+		filter_descr="vflip";
+	  }break;
+	  case 270:{
+		width=media_->height();
+		height=media_->width();
+		filter_descr="transpose=0";
+	  }break;
+	  case -90:{
+		width=media_->height();
+		height=media_->width();
+		filter_descr="transpose=2";
+	  }break;
+	}
+	VideoFilter video_filter(media_);
+	if (video_filter.InitVideoFilter(filter_descr)<0) {
+	  LOGE("Error:InitVideoFilter fail")
+	  return;
+	}
 	int64_t start_pts=0;
 
 	avformat_alloc_output_context2(&output_fmt_ctx, nullptr, nullptr, filename);
@@ -54,7 +86,7 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
 
 	AVOutputFormat *fmt = output_fmt_ctx->oformat;
 
-	video_encoder_->OpenCodecCtx(media_->video_stream());
+	video_encoder_->OpenCodecCtx(media_->video_stream(),width,height);
 	audio_encoder_->OpenCodecCtx();
 
 	if (fmt->video_codec!=video_encoder_->codec_id()) {
@@ -104,7 +136,7 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
 	vector<int64_t> pts_start(nb_streams);
 
 	if (!(fmt->flags & AVFMT_NOFILE)) {
-	  int32_t result = avio_open(&output_fmt_ctx->pb, filename, AVIO_FLAG_WRITE);
+	  result = avio_open(&output_fmt_ctx->pb, filename, AVIO_FLAG_WRITE);
 	  if (result < 0) {
 		LOGE("Error: avio_open output file failed! out_filename:%s",filename)
 		goto destroy;
@@ -122,6 +154,7 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
 	audio_encoder_->CreateFrame();
 
 	AVCodecContext * encodec_ctx= nullptr;
+	filter_frame= av_frame_alloc();
 
 	media_->decoder()->Decoding(start_time, end_time, [&](const AVFrame *frame,
 			int stream_index
@@ -165,10 +198,17 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
 
 	  start_pts=pts_start[stream->id];
 	  new_frame->pts = frame->pts-start_pts;
+	  new_frame->width=frame->width;
+	  new_frame->height=frame->height;
 //	  LOGD("[frame]id:%d\tpts:%ld\tdts:%ld",stream->id,new_frame->pts,new_frame->pkt_dts)
 //	  new_frame->pkt_dts=frame->pkt_dts-dts_start[stream->id];
 	  if(encodec_ctx){
-		result=	WriteFrame(output_fmt_ctx,encodec_ctx, new_frame,pkt_, stream->id,frame->pkt_duration);
+		if(stream_index==media_->video_stream_index()&&rotate_degrees!=0) {
+		  av_frame_make_writable(filter_frame);
+		  video_filter.FilterFrame(new_frame, filter_frame);
+		  new_frame=filter_frame;
+		}
+		result=WriteFrame(output_fmt_ctx,encodec_ctx, new_frame,pkt_, stream->id,frame->pkt_duration);
 	  }
 	  if(callback){
 		callback(filename,curr_millisecond-start_time-kMillisecondUnit/10,total_millisecond);
@@ -191,7 +231,9 @@ void Muxer::Muxing(int64_t start_time, int64_t end_time, const char *out_filenam
   	delete filename;
   	video_encoder_->DestroyFrame();
 	audio_encoder_->DestroyFrame();
-
+	if(filter_frame){
+	  av_frame_free(&filter_frame);
+	}
 	  if (output_fmt_ctx) {
 		if (!(output_fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
 		  avio_closep(&output_fmt_ctx->pb);

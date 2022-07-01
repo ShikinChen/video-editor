@@ -30,7 +30,7 @@ AVCodecID VideoEncoder::codec_id() const {
 AVCodecContext *VideoEncoder::codec_ctx() const {
   return codec_ctx_;
 }
-int32_t VideoEncoder::OpenCodecCtx(const AVStream *video_stream) {
+int32_t VideoEncoder::OpenCodecCtx(const AVStream *video_stream, int width, int height) {
   int32_t result = -1;
   if (!codec_ctx_) {
 	codec_ctx_ = avcodec_alloc_context3(codec_);
@@ -56,8 +56,16 @@ int32_t VideoEncoder::OpenCodecCtx(const AVStream *video_stream) {
   }
 
   auto codecpar = video_stream->codecpar;
-  codec_ctx_->width = codecpar->width;
-  codec_ctx_->height = codecpar->height;
+  if (width <= 0) {
+	codec_ctx_->width = codecpar->width;
+  } else {
+	codec_ctx_->width = width;
+  }
+  if (height <= 0) {
+	codec_ctx_->height = codecpar->height;
+  } else {
+	codec_ctx_->height = height;
+  }
   codec_ctx_->pix_fmt = static_cast<AVPixelFormat>(codecpar->format);
 
   codec_ctx_->time_base = video_stream->time_base;

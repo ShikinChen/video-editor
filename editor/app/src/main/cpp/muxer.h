@@ -32,8 +32,11 @@ class Muxer {
 
   void Muxing(int64_t start_time,
 			  int64_t end_time,
+			  int rotate_degrees,
 			  const char *out_filename,
-			  std::function<void(const char *out_filename,int64_t curr_millisecond, int64_t total_millisecond)> callback);
+			  std::function<void(const char *out_filename,
+								 int64_t curr_millisecond,
+								 int64_t total_millisecond)> callback);
 
  private:
   int32_t WriteFrame(AVFormatContext *output_fmt_ctx,

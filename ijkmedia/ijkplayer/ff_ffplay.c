@@ -1737,27 +1737,27 @@ static int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
 {
     int ret, i;
     int nb_filters = graph->nb_filters;
-    AVFilterInOut *outputs = NULL, *inputs = NULL;
+    AVFilterInOut *outputs_ = NULL, *inputs = NULL;
 
     if (filtergraph) {
-        outputs = avfilter_inout_alloc();
+        outputs_ = avfilter_inout_alloc();
         inputs  = avfilter_inout_alloc();
-        if (!outputs || !inputs) {
+        if (!outputs_ || !inputs) {
             ret = AVERROR(ENOMEM);
             goto fail;
         }
 
-        outputs->name       = av_strdup("in");
-        outputs->filter_ctx = source_ctx;
-        outputs->pad_idx    = 0;
-        outputs->next       = NULL;
+        outputs_->name       = av_strdup("in");
+        outputs_->filter_ctx = source_ctx;
+        outputs_->pad_idx    = 0;
+        outputs_->next       = NULL;
 
         inputs->name        = av_strdup("out");
         inputs->filter_ctx  = sink_ctx;
         inputs->pad_idx     = 0;
         inputs->next        = NULL;
 
-        if ((ret = avfilter_graph_parse_ptr(graph, filtergraph, &inputs, &outputs, NULL)) < 0)
+        if ((ret = avfilter_graph_parse_ptr(graph, filtergraph, &inputs, &outputs_, NULL)) < 0)
             goto fail;
     } else {
         if ((ret = avfilter_link(source_ctx, 0, sink_ctx, 0)) < 0)
@@ -1770,7 +1770,7 @@ static int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
 
     ret = avfilter_graph_config(graph, NULL);
 fail:
-    avfilter_inout_free(&outputs);
+    avfilter_inout_free(&outputs_);
     avfilter_inout_free(&inputs);
     return ret;
 }

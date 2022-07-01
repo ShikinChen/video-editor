@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 #include <libavformat/avformat.h>
+#include <libavfilter/avfilter.h>
 #include <libavcodec/jni.h>
 
 const char *kNativeRenderClassName = "me/shiki/editor/MediaEditor";
@@ -54,12 +55,13 @@ JNIEXPORT void JNICALL Save(JNIEnv *env,
 							jobject instance,
 							jlong j_start_time,
 							jlong j_end_time,
+							jint j_rotate_degrees,
 							jstring j_out_filename) {
   if (media_editor_) {
 	const char *out_filename = env->GetStringUTFChars(j_out_filename, nullptr);
-	media_editor_->Save(j_start_time, j_end_time, out_filename, [=](const char *out_filename,
-																	int64_t curr_millisecond,
-																	int64_t total_millisecond) {
+	media_editor_->Save(j_start_time, j_end_time, j_rotate_degrees, out_filename, [=](const char *out_filename,
+																					  int64_t curr_millisecond,
+																					  int64_t total_millisecond) {
 	  LOGD("curr_millisecond:%ld\ttotal_millisecond:%ld", curr_millisecond, total_millisecond)
 	  call_java_media_editor_->MuxingListCallback(out_filename, curr_millisecond, total_millisecond, Other);
 	});
@@ -78,6 +80,10 @@ JNIEXPORT jlong JNICALL Duration(JNIEnv *env,
 
 JNIEXPORT void JNICALL EncodingDecodingInfo(JNIEnv *env, jobject instance) {
   void *opaque = nullptr;
+  const AVFilter *f_tmp;
+  while ((f_tmp = av_filter_iterate(&opaque))) {
+	LOGD("[Filter]:%s", f_tmp->name);
+  }
   const AVOutputFormat *m_tmp;
   while ((m_tmp = av_muxer_iterate(&opaque))) {
 	LOGD("[Muxer]:%s", m_tmp->name);
@@ -116,7 +122,7 @@ static JNINativeMethod kMethods[] = {
 	{"native_EncodingDecodingInfo", "()V", (void *)(EncodingDecodingInfo)},
 	{"native_DumpImageList", "(JJIIILjava/lang/String;)V", (void *)(DumpImageList)},
 	{"native_Duration", "()J", (jlong *)(Duration)},
-	{"native_Save", "(JJLjava/lang/String;)V", (void *)(Save)},
+	{"native_Save", "(JJILjava/lang/String;)V", (void *)(Save)},
 };
 
 static int RegisterNativeMethods(JNIEnv *env, const char *className, JNINativeMethod *methods, int methodNum) {

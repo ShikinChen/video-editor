@@ -74,4 +74,7 @@
     <string name="VideoView_player_IjkMediaPlayer">Player: IjkMediaPlayer</string>
     <string name="VideoView_player_IjkExoMediaPlayer">Player: IjkExoMediaPlayer</string>
     <string name="save">保存</string>
+    <string name="save_progress">保存进度</string>
+    <string name="rotate_right">右旋转</string>
+    <string name="rotate_left">左旋转</string>
 </resources>

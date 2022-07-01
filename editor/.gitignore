@@ -95,7 +95,7 @@ vcs.xml
 # lint
 lint/intermediates/
 lint/generated/
-lint/outputs/
+lint/outputs_/
 lint/tmp/
 # lint/reports/
 

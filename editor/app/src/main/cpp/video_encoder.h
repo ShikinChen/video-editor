@@ -22,15 +22,14 @@ class VideoEncoder {
 
   void DestroyVideoEncoder();
 
-  AVFrame * CreateFrame();
+  AVFrame *CreateFrame();
   void DestroyFrame();
 
-  int32_t OpenCodecCtx(const AVStream *video_stream);
+  int32_t OpenCodecCtx(const AVStream *video_stream, int width = 0, int height = 0);
 
   AVCodecContext *codec_ctx() const;
   AVCodecID codec_id() const;
   AVFrame *frame() const;
-
 
  private:
   AVFrame *frame_ = nullptr;

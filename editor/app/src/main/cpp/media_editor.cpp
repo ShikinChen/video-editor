@@ -46,6 +46,7 @@ int64_t MediaEditor::Duration() {
 }
 void MediaEditor::Save(int64_t start_time,
 					   int64_t end_time,
+					   int rotate_degrees,
 					   const char *out_filename,
 					   std::function<void(const char *out_filename,
 										  int64_t curr_millisecond,
@@ -54,6 +55,7 @@ void MediaEditor::Save(int64_t start_time,
   thread thread_([=] {
 	muxer_->Muxing(start_time,
 				   end_time,
+				   rotate_degrees,
 				   filename,
 				   [=](const char *out_filename,
 					   int64_t curr_millisecond,

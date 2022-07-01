@@ -73,3 +73,23 @@ int64_t Media::Duration() {
   }
   return -1;
 }
+
+int Media::width() const {
+  if (!video_stream_) {
+	return 0;
+  }
+  return video_stream_->codecpar->width;
+}
+
+int Media::height() const {
+  if (!video_stream_) {
+	return 0;
+  }
+  return video_stream_->codecpar->height;
+}
+AVPixelFormat Media::pix_fmt() const {
+  if (!video_stream_) {
+	return AVPixelFormat::AV_PIX_FMT_NONE;
+  }
+  return static_cast<AVPixelFormat>(video_stream_->codecpar->format);
+}

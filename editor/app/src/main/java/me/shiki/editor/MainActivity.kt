@@ -10,6 +10,8 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -48,11 +50,22 @@ class MainActivity : AppCompatActivity() {
         findViewById(R.id.video_view)
     }
 
+    private val progressTitleTv: TextView by lazy {
+        findViewById(R.id.progress_title_tv)
+    }
+
+    private val encodeBar: ProgressBar by lazy {
+        findViewById(R.id.encode_bar)
+    }
+
     private val sdPath by lazy {
         Environment.getExternalStorageDirectory().absolutePath
     }
-    private val filename by lazy {
+    private val inFilename by lazy {
         "${sdPath}/sample_1280x720_surfing_with_audio.mp4"
+    }
+    private val saveFilename by lazy {
+        "${sdPath}/save.mp4"
     }
 
     private var duration: Long = 0
@@ -73,6 +86,14 @@ class MainActivity : AppCompatActivity() {
         }
         mediaEditor.muxingCallback = { filename, currMillisecond, totalMillisecond ->
             Log.d(TAG, "currMillisecond:$currMillisecond,totalMillisecond:$totalMillisecond")
+            val progress = ((currMillisecond.toFloat() / totalMillisecond) * 100).toInt()
+            lifecycleScope.launch(Dispatchers.Main) {
+                progressTitleTv.text = "${resources.getString(R.string.save_progress)}:${progress}%"
+                encodeBar.progress = progress
+                if (progress >= 100) {
+                    Toast.makeText(this@MainActivity, "保存文件路径:${saveFilename}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
         mediaProgressBar.onProgressBarPointChangeListener = {
             Log.d(TAG, "value:$it")
@@ -88,10 +109,12 @@ class MainActivity : AppCompatActivity() {
 
         rightRotateBtn.setOnClickListener {
             videoView.setVideoRotation(videoView.videoRotationDegree + 90)
+            mediaEditor.rotateDegrees += 90
         }
 
         leftRotateBtn.setOnClickListener {
             videoView.setVideoRotation(videoView.videoRotationDegree - 90)
+            mediaEditor.rotateDegrees -= 90
         }
 
         PermissionX.init(this)
@@ -101,7 +124,7 @@ class MainActivity : AppCompatActivity() {
             ).request { allGranted, grantedList, deniedList ->
                 if (allGranted) {
                     checkStorageManagerPermission()
-                    mediaEditor.open(filename)
+                    mediaEditor.open(inFilename)
                     val outFile = File("${sdPath}/tmp/out")
                     if (!outFile.exists()) {
                         outFile.mkdirs()
@@ -117,7 +140,7 @@ class MainActivity : AppCompatActivity() {
     private fun initIjk() {
         IjkMediaPlayer.loadLibrariesOnce(null)
         IjkMediaPlayer.native_profileBegin("libijkplayer.so")
-        videoView.setVideoPath(filename)
+        videoView.setVideoPath(inFilename)
         //TODO 暂时使用TextureView为了预览时候可以旋转
         videoView.setRender(IjkVideoView.RENDER_TEXTURE_VIEW)
 //        videoView.start()
@@ -142,7 +165,9 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.save -> {
-                mediaEditor.save("${sdPath}/save.mp4", 10000, 20000)
+                Log.d(TAG, "rotateDegrees:${mediaEditor.rotateDegrees}")
+                //TODO 为测试方便暂时写死截取时间段
+                mediaEditor.save(saveFilename, 20000, 30000)
             }
         }
         return super.onOptionsItemSelected(item)

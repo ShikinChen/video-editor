@@ -19,6 +19,10 @@ class MediaEditor {
 
     var startTime: Long = 0
     var endTime: Long = -1
+    var rotateDegrees: Int = 0
+        set(value) {
+            field = value % 360
+        }
 
     var dumpImageCallback: ((filename: String, index: Int) -> Unit)? = null
     var muxingCallback: ((filename: String, currMillisecond: Long, totalMillisecond: Long) -> Unit)? = null
@@ -42,10 +46,14 @@ class MediaEditor {
         native_DumpImageList(startTime, endTime, imgSize, imgWidth, imgHeight, outFilename)
     }
 
+    @JvmOverloads
     fun save(
-        outFilename: String, startTime: Long = this.startTime, endTime: Long = this.endTime,
+        outFilename: String,
+        startTime: Long = this.startTime,
+        endTime: Long = this.endTime,
+        rotateDegrees: Int = this.rotateDegrees
     ) {
-        native_Save(startTime, endTime, outFilename)
+        native_Save(startTime, endTime, rotateDegrees, outFilename)
     }
 
     private fun dumpImageListCallback(filename: String, index: Int) {
@@ -76,7 +84,8 @@ class MediaEditor {
     private external fun native_Init()
 
     private external fun native_Save(
-        startTime: Long, endTime: Long,
+        startTime: Long, endTime: Long, rotateDegrees: Int,
         outFilename: String
+
     )
 }

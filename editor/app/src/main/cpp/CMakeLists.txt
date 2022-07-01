@@ -14,7 +14,7 @@ set(PATH_TO_CPP ${CMAKE_SOURCE_DIR}/src/main/cpp)
 
 file(GLOB PATH_TO_CPP_FILE
         ${PATH_TO_CPP}/*.cpp
-        ${PATH_TO_CPP}/ffmpeg/*.cpp)
+        ${PATH_TO_CPP}/filter/*.cpp)
 
 add_library(
         media_editor

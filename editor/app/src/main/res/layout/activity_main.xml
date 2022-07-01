@@ -22,7 +22,7 @@
         android:id="@+id/left_rotate_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="左旋转"
+        android:text="@string/rotate_left"
         app:layout_constraintBottom_toTopOf="@+id/media_progress_bar"
         app:layout_constraintLeft_toLeftOf="@+id/media_progress_bar" />
 
@@ -30,7 +30,23 @@
         android:id="@+id/right_rotate_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="右旋转"
+        android:text="@string/rotate_right"
         app:layout_constraintBottom_toTopOf="@+id/media_progress_bar"
         app:layout_constraintRight_toRightOf="@+id/media_progress_bar" />
+
+    <TextView
+        android:id="@+id/progress_title_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/save_progress"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ProgressBar
+        android:id="@+id/encode_bar"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        app:layout_constraintTop_toBottomOf="@+id/progress_title_tv" />
 </androidx.constraintlayout.widget.ConstraintLayout>

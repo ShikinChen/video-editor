@@ -4,7 +4,7 @@
 
 #ifndef JNITHREAD_ANDROIDLOG_H
 #define JNITHREAD_ANDROIDLOG_H
-#include <cstring>
+#include <string.h>
 #include <android/log.h>
 
 #define LOG_DEBUG true
