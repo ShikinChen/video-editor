@@ -1,8 +1,21 @@
-### 基于ijkplayer编译ffmpeg
+# 学习ffmpeg而开发的简单视频编辑app
+
+本身基于ijkplayer进行开发,使用ijkplayer进行预览,然后基于ijkplayer的ffmpeg进行扩展开发视频编辑功能
+
+
+## 功能包括
+1. 截取一段视频
+2. 视频旋转
+
+### 项目导入
+直接将 editor 目录,导入Android Studio
+
+### 基于ijkplayer编译ffmpeg(可选),本身已经有编译好的ijkplayer的arm64和armv7a库
 ```
 git clone https://github.com/ShikinChen/video-editor
 cd video-editor
 
+#初始化项目需要第三方库
 ./init-android.sh
 
 #编译ffmpeg一定要使用ndk r17
